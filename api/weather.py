@@ -13,35 +13,30 @@ class handler(BaseHTTPRequestHandler):
 
             soup = BeautifulSoup(response.content, 'html.parser')
 
-            # 最新のセレクタを使って天気と気温を抽出
-            # 天気情報の要素を検索
-            weather_element = soup.select_one(".oneday-weather-telop")
-            # 気温情報の要素を検索
-            temperature_element = soup.select_one(".oneday-weather-temp")
+            # 「公式見解」のセクションを特定
+            # 最新のセレクタを使って、公式見解の文章を抽出
+            comment_element = soup.select_one(".oneday-comment-box__text")
             
-            weather = weather_element.get_text(strip=True) if weather_element else "情報なし"
-            temperature = temperature_element.get_text(strip=True) if temperature_element else "情報なし"
+            comment = comment_element.get_text(strip=True) if comment_element else "公式見解の取得に失敗しました。"
             
-            # 不要な文字を削除
-            weather = re.sub(r'[\r\n\t]', '', weather)
-            temperature = re.sub(r'[\r\n\t]', '', temperature)
+            # 不要な空白や改行を削除
+            comment = re.sub(r'[\r\n\t]', '', comment)
 
             result = {
-                "weather": weather,
-                "temperature": temperature
+                "official_comment": comment
             }
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps(result).encode('utf-8'))
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
 
         except requests.exceptions.RequestException as e:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(json.dumps({"error": f"HTTPリクエストエラー: {e}"}).encode('utf-8'))
+            self.wfile.write(json.dumps({"error": f"HTTPリクエストエラー: {e}"}, ensure_ascii=False).encode('utf-8'))
         except Exception as e:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(json.dumps({"error": f"予期せぬエラー: {e}"}).encode('utf-8'))
+            self.wfile.write(json.dumps({"error": f"予期せぬエラー: {e}"}, ensure_ascii=False).encode('utf-8'))
