@@ -7,28 +7,33 @@ import re
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
-            # 青空文庫の『こころ』の冒頭ページのURL
-            url = "https://www.aozora.gr.jp/cards/000148/files/773_14560.html"
-            response = requests.get(url)
-            response.raise_for_status()
-
-            # Shift_JISでデコード
-            response.encoding = 'shift_jis'
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # 本文のある要素を特定 (div.main_text)
-            main_text_element = soup.find('div', class_='main_text')
+            # 1. Yahoo!天気から天気概要をスクレイピング
+            yahoo_url = "https://weather.yahoo.co.jp/weather/27/6210/27382.html"
+            yahoo_response = requests.get(yahoo_url)
+            yahoo_response.raise_for_status()
+            yahoo_soup = BeautifulSoup(yahoo_response.content, 'html.parser')
             
-            # 本文の最初の段落（例として最初の300文字）を抽出
-            if main_text_element:
-                text_content = main_text_element.get_text(strip=True)
-                # 冒頭部分を抽出して不要な改行を整形
-                excerpt = text_content[:300].replace('。', '。\n').strip()
-            else:
-                excerpt = "本文の取得に失敗しました。"
+            summary_element = yahoo_soup.select_one(".yjw_table_area .yjw_td_comment")
+            summary = summary_element.get_text(strip=True) if summary_element else "概要の取得に失敗しました。"
+            summary = re.sub(r'[\r\n\t]', '', summary)
+
+            # 2. OpenWeatherMapから気温情報をAPIで取得
+            # あなたのOpenWeatherMap APIキーをここに貼り付けてください
+            owm_api_key = "e7be61aefcb6fae216e924aa79a0cec3"
+            lat = 34.4554
+            lon = 135.6322
+            owm_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={owm_api_key}&units=metric&lang=ja"
+            owm_response = requests.get(owm_url)
+            owm_response.raise_for_status()
+            owm_data = owm_response.json()
+            
+            temp_max = owm_data['main']['temp_max']
+            temp_min = owm_data['main']['temp_min']
 
             result = {
-                "text": excerpt
+                "weather_summary": summary,
+                "temp_max": temp_max,
+                "temp_min": temp_min
             }
 
             self.send_response(200)
